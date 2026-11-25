@@ -476,7 +476,7 @@ impl MessagingUi {
 							1,
 							colors.raised,
 						);
-						self.server_folders(ui, state, commands);
+						self.server_folders(ui, state, commands, false);
 						self.add_server_tile(ui, state, RAIL_TILE);
 					});
 			});
@@ -605,33 +605,50 @@ mod tests {
 			}
 			texts
 		};
-		// The Home button's badge is the rail's only "3"; its vertical position depends on the
-		// platform's title bar, so the check counts rail badges rather than placing one.
-		let rail_threes = |texts: &[(String, egui::Rect)]| {
-			texts
-				.iter()
-				.filter(|(text, rect)| text == "3" && rect.center().x < RAIL_WIDTH)
-				.count()
-		};
-		let shown = rail_threes(&drawn(&mut state, false));
-		assert_eq!(shown, 1, "Home shows 3 requests");
-		let hidden = rail_threes(&drawn(&mut state, true));
-		assert_eq!(hidden, 0, "Home hides the request count");
-		// The Home button's accessible name and tooltip leave the counts out with the badge.
-		let counted = home_request_label(2, 1);
-		let plain = home_request_label(0, 0);
-		assert_ne!(counted, plain);
-		drawn(&mut state, false);
-		assert!(
-			labels.borrow().contains(&counted),
-			"Home names its requests"
-		);
-		drawn(&mut state, true);
-		assert!(labels.borrow().contains(&plain), "{:?}", labels.borrow());
-		assert!(
-			!labels.borrow().contains(&counted),
-			"Home omits its requests"
-		);
+		if crate::posta::ENABLED {
+			let messages = crate::i18n::translate("posta-messages");
+			let friends = crate::i18n::translate("friends");
+			let counted = [format!("{messages} · 1"), format!("{friends} · 2")];
+			for (hidden, expected) in [(false, &counted), (true, &[messages, friends])] {
+				let drawn = drawn(&mut state, hidden);
+				for label in expected {
+					assert!(drawn.iter().any(|(text, _)| text == label));
+					assert!(labels.borrow().contains(label));
+				}
+				if hidden {
+					assert!(counted.iter().all(|label| !labels.borrow().contains(label)
+						&& drawn.iter().all(|(text, _)| text != label)));
+				}
+			}
+		} else {
+			// The Home button's badge is the rail's only "3"; its vertical position depends on the
+			// platform's title bar, so the check counts rail badges rather than placing one.
+			let rail_threes = |texts: &[(String, egui::Rect)]| {
+				texts
+					.iter()
+					.filter(|(text, rect)| text == "3" && rect.center().x < RAIL_WIDTH)
+					.count()
+			};
+			let shown = rail_threes(&drawn(&mut state, false));
+			assert_eq!(shown, 1, "Home shows 3 requests");
+			let hidden = rail_threes(&drawn(&mut state, true));
+			assert_eq!(hidden, 0, "Home hides the request count");
+			// The Home button's accessible name and tooltip leave the counts out with the badge.
+			let counted = home_request_label(2, 1);
+			let plain = home_request_label(0, 0);
+			assert_ne!(counted, plain);
+			drawn(&mut state, false);
+			assert!(
+				labels.borrow().contains(&counted),
+				"Home names its requests"
+			);
+			drawn(&mut state, true);
+			assert!(labels.borrow().contains(&plain), "{:?}", labels.borrow());
+			assert!(
+				!labels.borrow().contains(&counted),
+				"Home omits its requests"
+			);
+		}
 		// Friends view: the Pending tab carries the incoming count only without the tweak.
 		state.open_messages();
 		let label = pending.to_string();

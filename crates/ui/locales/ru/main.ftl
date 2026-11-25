@@ -80,6 +80,13 @@ gpu-power-saving = Экономия энергии
 gpu-automatic-description = Пусть Серейн выберет графический процессор, который сможет отрисовать это окно.
 gpu-high-performance-description = Используйте дискретную видеокарту, если она доступна.
 gpu-power-saving-description = Используйте встроенную графику для экономии заряда батареи.
+posta-messages = Сообщения
+posta-servers = Серверы
+posta-conversations = Переписка
+posta-call = Позвонить
+posta-call-failed = Не удалось начать звонок
+posta-call-connecting = Подключение…
+
 direct-messages = Личные сообщения
 find-conversation = Найти разговор
 find-conversation-tooltip = Поиск загруженных разговоров (Ctrl/Cmd+K)

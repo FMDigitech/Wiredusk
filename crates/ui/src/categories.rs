@@ -1286,7 +1286,17 @@ impl MessagingUi {
 							if !enabled && visible {
 								label.push_str(" · unavailable");
 							}
-							let subtitle = if dm_list && channel.kind == 1 {
+							let preview = (crate::posta::ENABLED
+								&& dm_list && visible && channel.supports_text())
+							.then(|| state.loaded_latest_message(channel))
+							.flatten()
+							.filter(|message| {
+								self.timeline.allows_preview(ui.ctx(), state, message)
+							})
+							.and_then(|message| state.conversation_preview(message));
+							let subtitle = if preview.is_some() {
+								preview
+							} else if dm_list && channel.kind == 1 {
 								channel.recipients.first().and_then(|user| {
 									let (_, custom, activities, _) =
 										crate::profiles::presence(state, user.id, None);

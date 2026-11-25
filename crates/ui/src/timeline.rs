@@ -1326,8 +1326,25 @@ fn dm_intro(
 	action
 }
 
-/// Main and thread-starter rows share the same opt-in presentation filter. Ignored authors are
-/// included only when the primary blocked filter is enabled, matching the dependent Chat control.
+impl TimelineView {
+	pub(super) fn allows_preview(
+		&self,
+		ctx: &egui::Context,
+		state: &State,
+		message: &Message,
+	) -> bool {
+		let hide_blocked = self.hide_blocked_messages
+			|| crate::interface_tweaks::on(ctx, extensions::InterfaceTweak::HiddenBlockedMessages);
+		message_visible(
+			state,
+			message.author.id,
+			hide_blocked,
+			self.hide_blocked_messages && self.hide_ignored_messages,
+		)
+	}
+}
+
+/// Ignored authors are hidden only when both reading filters are enabled.
 fn message_visible(state: &State, author: Id, hide_blocked: bool, hide_ignored: bool) -> bool {
 	!(hide_blocked && state.user_blocked(author) == Some(true))
 		&& !(hide_blocked && hide_ignored && state.user_ignored(author) == Some(true))

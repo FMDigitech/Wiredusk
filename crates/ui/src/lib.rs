@@ -85,6 +85,7 @@ mod notification_settings;
 mod notifications;
 mod pending;
 mod post_menu;
+mod posta;
 mod preload;
 mod profiles;
 mod rtl;
@@ -450,6 +451,9 @@ pub struct MessagingUi {
 	reading_zoom_draft: Option<u16>,
 	friend_removal: Option<(u64, model::User)>,
 	user_direct: Option<user_direct::Pending>,
+	posta_last_server: Option<Id>,
+	posta_last_dm: Option<Id>,
+	posta_server_navigation: bool,
 	members_narrow_open: bool,
 	/// Only the open member request's revealed prefix; member data stays in the bounded core cache.
 	member_extent: Option<((u64, Id, u64), usize)>,
@@ -2578,7 +2582,7 @@ impl MessagingUi {
 			})
 			.show(ui, |ui| {
 				let ctx = ui.ctx().clone();
-				if self.guild.is_none() {
+				if self.guild.is_none() && !posta::ENABLED {
 					// Search and Friends share one row; Friends is the compact glyph beside it.
 					ui.horizontal(|ui| {
 						ui.spacing_mut().item_spacing.x = 6.0;
@@ -2822,7 +2826,7 @@ impl MessagingUi {
 					self.reconnecting_banner(ui, first);
 					divider(ui);
 				}
-				if in_call {
+				if in_call && !posta::ENABLED {
 					if self.voice_stream_section(ui, state) {
 						divider(ui);
 					}
@@ -2890,9 +2894,14 @@ impl MessagingUi {
 										self.settings.open = true;
 										egui::Popup::close_all(ui.ctx());
 									}
-									self.mute_toggle_with_settings(ui, state, commands, true);
-									ui.add_space(4.0);
-									self.mute_toggle_with_settings(ui, state, commands, false);
+									if !posta::ENABLED {
+										self.mute_toggle_with_settings(ui, state, commands, true);
+										ui.add_space(4.0);
+										self.mute_toggle_with_settings(ui, state, commands, false);
+									} else if !in_call {
+										self.mute_toggle(ui, state, commands, true, 26.0);
+										self.mute_toggle(ui, state, commands, false, 26.0);
+									}
 									ui.with_layout(
 										egui::Layout::left_to_right(egui::Align::Center),
 										|ui| {
@@ -3144,9 +3153,11 @@ impl MessagingUi {
 				}
 				Some(c) if c.guild.is_none() => {
 					if let Some(user) = c.recipients.first() {
-						// Header avatar identifies the conversation; the profile is a
-						// context-menu action, not a click target.
-						let avatar = self.avatars.show_plain(ui, user, 24.0, state.demo);
+						let avatar = if posta::ENABLED && dm {
+							self.avatars.show(ui, user, 28.0, state.demo)
+						} else {
+							self.avatars.show_plain(ui, user, 24.0, state.demo)
+						};
 						if dm {
 							user_menu::show_with_pin(
 								&avatar,
@@ -3163,6 +3174,9 @@ impl MessagingUi {
 						}
 						let (status, _, _, clients) = profiles::presence(state, user.id, None);
 						let status = profiles::shown_status(state, user.id, status);
+						if posta::ENABLED && dm {
+							self.profile.person_click(ui, &avatar, None, user);
+						}
 						if dm && state.direct_typing(c.id, std::time::Instant::now()) {
 							profiles::typing_badge(ui, avatar.rect, status, colors.sidebar);
 						} else if dm && let Some(status) = status {
@@ -3250,8 +3264,15 @@ impl MessagingUi {
 						);
 					} else {
 						// Search pill.
-						let (pill, response) =
-							ui.allocate_exact_size(egui::vec2(144.0, 28.0), egui::Sense::click());
+						let search_width = if posta::ENABLED && ui.available_width() < 500.0 {
+							32.0
+						} else {
+							144.0
+						};
+						let (pill, response) = ui.allocate_exact_size(
+							egui::vec2(search_width, 28.0),
+							egui::Sense::click(),
+						);
 						let enabled = state.can_search();
 						response.widget_info(|| {
 							egui::WidgetInfo::labeled(
@@ -3266,13 +3287,15 @@ impl MessagingUi {
 						} else {
 							colors.muted.gamma_multiply(0.5)
 						};
-						ui.painter().text(
-							pill.left_center() + egui::vec2(10.0, 0.0),
-							egui::Align2::LEFT_CENTER,
-							language.text("search"),
-							egui::FontId::proportional(13.0),
-							pill_text,
-						);
+						if search_width > 32.0 {
+							ui.painter().text(
+								pill.left_center() + egui::vec2(10.0, 0.0),
+								egui::Align2::LEFT_CENTER,
+								language.text("search"),
+								egui::FontId::proportional(13.0),
+								pill_text,
+							);
+						}
 						icons::paint(
 							ui.painter(),
 							icons::Icon::Search,
@@ -3301,7 +3324,11 @@ impl MessagingUi {
 						.is_some_and(|channel| channel.kind == 1)
 						// Narrow windows keep the member dialog for every conversation.
 						&& wide_members;
-					let (icon, label) = if !direct {
+					let profile_recipient = channel
+						.as_ref()
+						.filter(|_| posta::ENABLED && dm)
+						.and_then(|channel| channel.recipients.first());
+					let (icon, label) = if !direct && profile_recipient.is_none() {
 						(icons::Icon::People, language.text("show-member-list"))
 					} else if show_members {
 						(icons::Icon::Profile, language.text("hide-user-profile"))
@@ -3312,6 +3339,8 @@ impl MessagingUi {
 						if wide_members {
 							let shown = self.members_preference(state);
 							*shown = !*shown;
+						} else if let Some(user) = profile_recipient {
+							self.profile.open_full(user.clone());
 						} else {
 							self.members_narrow_open = !self.members_narrow_open;
 						}
@@ -3389,8 +3418,18 @@ impl MessagingUi {
 						.as_ref()
 						.is_some_and(|c| c.guild.is_none() && matches!(c.kind, 1 | 3))
 				}) {
-					self.voice_settings(ui, state.demo, state.voice.active.is_some());
-					self.call_button(ui, state, channel, commands);
+					if !posta::ENABLED || state.voice.active.is_none() {
+						self.voice_settings(ui, state.demo, state.voice.active.is_some());
+					}
+					if !posta::ENABLED
+						|| state
+							.voice
+							.active
+							.as_ref()
+							.is_none_or(|call| call.channel != channel)
+					{
+						self.call_button(ui, state, channel, commands);
+					}
 				}
 				ui.with_layout(egui::Layout::left_to_right(egui::Align::Center), |ui| {
 					// Centre the name block in the fixed-height header even without a subtitle.
@@ -5684,14 +5723,33 @@ impl MessagingUi {
 			self.take_archive_request(state, &mut commands);
 			return commands;
 		}
-		// Server rail and channel list share one resizable column so the account card can
-		// span both, like Discord's bottom-left user pill.
-		let rail = notifications::RAIL_WIDTH;
-		let sidebar_max = self.prepare_reading_sidebar(ui, "navigation", rail);
+		// The account footer spans the resizable navigation column.
+		if posta::ENABLED {
+			self.posta_toolbar(ui, state, &mut commands);
+		}
+		let rail = if !posta::ENABLED {
+			notifications::RAIL_WIDTH
+		} else if self.guild.is_some() {
+			posta::SERVER_WIDTH
+		} else {
+			0.0
+		};
+		let navigation_id = if !posta::ENABLED {
+			"navigation"
+		} else if self.guild.is_some() {
+			"posta-server-navigation"
+		} else {
+			"posta-message-navigation"
+		};
+		if posta::ENABLED && self.posta_server_navigation != self.guild.is_some() {
+			self.posta_server_navigation = self.guild.is_some();
+			self.reading_sidebar_applied = None;
+		}
+		let sidebar_max = self.prepare_reading_sidebar(ui, navigation_id, rail);
 		// See-through chrome paints each section once; a shared column coat would stack under
 		// the rail and account strip and make them denser than the title bar.
 		let layered = design::layered_sections(ui);
-		let navigation = egui::Panel::left("navigation")
+		let navigation = egui::Panel::left(navigation_id)
 			.resizable(true)
 			.show_separator_line(!design::has_window_background(ui))
 			.default_size(rail + f32::from(self.reading_preferences.sidebar_width).min(sidebar_max))
@@ -5735,7 +5793,11 @@ impl MessagingUi {
 							}),
 					)
 					.show(ui, |ui| self.account_card(ui, state, &mut commands));
-				self.notification_rail(ui, state, &mut commands);
+				if !posta::ENABLED {
+					self.notification_rail(ui, state, &mut commands);
+				} else if self.guild.is_some() {
+					self.posta_servers(ui, state, &mut commands);
+				}
 				// The lists sit on their own rounded surface beside the rail, above the card.
 				let lists = ui.available_rect_before_wrap();
 				// A window image continues the lists into the card strip, so only it stays square.
@@ -5772,6 +5834,16 @@ impl MessagingUi {
 						design::paint_corner_notch(ui.painter(), corner, inward, 8.0, notch);
 					}
 				}
+				let title = self.guild.and_then(|id| state.guild(id)).map_or_else(
+					|| {
+						language.text(if posta::ENABLED {
+							"posta-conversations"
+						} else {
+							"direct-messages"
+						})
+					},
+					|guild| guild.name.clone(),
+				);
 				self.sidebar(ui, state, &title, &mut commands);
 			});
 		self.record_reading_sidebar(navigation.response.rect.width() - rail);
@@ -5864,7 +5936,14 @@ impl MessagingUi {
 		self.search.extension_actions = self.extensions.message_actions();
 		let search_open =
 			self.search.results_visible(state) && state.selected.is_some() && !selected_voice;
-		let show_members = !selected_voice
+		let narrow_dm_profile = posta::ENABLED
+			&& !wide_members
+			&& state
+				.selected
+				.and_then(|id| state.channel(id))
+				.is_some_and(|channel| channel.kind == 1);
+		let show_members = !narrow_dm_profile
+			&& !selected_voice
 			&& !search_open
 			&& state.selected.is_some()
 			&& if wide_members {
@@ -6049,6 +6128,9 @@ impl MessagingUi {
 				}
 				self.startup_warnings_toasted = (state.generation, warnings);
 				if state.selected.is_none() && self.guild.is_none() {
+					if posta::ENABLED {
+						self.posta_call_strip(ui, state, &mut commands, false);
+					}
 					self.call_bar(ui, state, &mut commands, None);
 					self.timeline.download.show_status(ui);
 					self.friends_page(ui, state, &mut commands);
@@ -6066,6 +6148,11 @@ impl MessagingUi {
 						false,
 						&mut commands,
 					);
+				}
+				if posta::ENABLED {
+					let guild_stage =
+						selected_voice && (!self.voice_chat_open || ui.available_width() >= 720.0);
+					self.posta_call_strip(ui, state, &mut commands, guild_stage);
 				}
 				let message_fill = (design::has_section_background(ui)
 					&& state.selected.is_some()
@@ -9997,6 +10084,7 @@ mod composer_tests {
 		slots.insert(0, Some(model::MemberSlot::Group("online".into())));
 		slots.insert(0, Some(model::MemberSlot::Group("8".into())));
 		let mut messaging = MessagingUi::default();
+		messaging.reading_preferences.show_members = true;
 		let context = egui::Context::default();
 		let output = context.run_ui(
 			egui::RawInput {
@@ -10345,6 +10433,10 @@ mod composer_tests {
 			.drafts
 			.insert(channel, "Keep this unsent draft".into());
 		let mut messaging = MessagingUi {
+			reading_preferences: model::ReadingPreferences {
+				show_members: true,
+				..Default::default()
+			},
 			navigation_channel: Some(channel),
 			guild: Some(guild),
 			profile: {

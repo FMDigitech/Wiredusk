@@ -80,6 +80,13 @@ gpu-power-saving = 省電力
 gpu-automatic-description = Serein にこのウィンドウを描画できる GPU を選択させます。
 gpu-high-performance-description = 専用グラフィックス カードが利用可能な場合は、それを使用してください。
 gpu-power-saving-description = 内蔵グラフィックスを使用してバッテリーを節約します。
+posta-messages = メッセージ
+posta-servers = サーバー
+posta-conversations = 会話
+posta-call = 通話
+posta-call-failed = 通話に失敗しました
+posta-call-connecting = 接続中…
+
 direct-messages = ダイレクトメッセージ
 find-conversation = 会話を見つける
 find-conversation-tooltip = ロードされた会話を検索 (Ctrl/Cmd+K)

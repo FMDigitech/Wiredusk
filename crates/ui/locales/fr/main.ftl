@@ -80,6 +80,13 @@ gpu-power-saving = Économie d'énergie
 gpu-automatic-description = Laissez Serein choisir le GPU qui peut dessiner cette fenêtre.
 gpu-high-performance-description = Utilisez la carte graphique discrète lorsqu'elle est disponible.
 gpu-power-saving-description = Utilisez des graphiques intégrés pour économiser la batterie.
+posta-messages = Messages
+posta-servers = Serveurs
+posta-conversations = Conversations
+posta-call = Appeler
+posta-call-failed = Échec de l’appel
+posta-call-connecting = Connexion…
+
 direct-messages = Messages directs
 find-conversation = Rechercher une conversation
 find-conversation-tooltip = Rechercher des conversations chargées (Ctrl/Cmd+K)

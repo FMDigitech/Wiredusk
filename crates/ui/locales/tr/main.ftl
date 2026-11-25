@@ -80,6 +80,13 @@ gpu-power-saving = Güç tasarrufu
 gpu-automatic-description = Bu pencereyi çizebilecek GPU'yu Serein seçsin.
 gpu-high-performance-description = Mevcut olduğunda ayrı grafik kartını kullanın.
 gpu-power-saving-description = Pilden tasarruf etmek için entegre grafikleri kullanın.
+posta-messages = Mesajlar
+posta-servers = Sunucular
+posta-conversations = Sohbetler
+posta-call = Ara
+posta-call-failed = Arama başarısız
+posta-call-connecting = Bağlanıyor…
+
 direct-messages = Doğrudan Mesajlar
 find-conversation = Görüşme bul
 find-conversation-tooltip = Yüklenen konuşmaları arayın (Ctrl/Cmd+K)

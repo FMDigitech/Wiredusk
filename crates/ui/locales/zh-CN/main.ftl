@@ -80,6 +80,13 @@ gpu-power-saving = 省电
 gpu-automatic-description = 让 Serein 自行选择能绘制此窗口的 GPU。
 gpu-high-performance-description = 有独立显示卡时就使用它。
 gpu-power-saving-description = 使用集成显卡以节省电力。
+posta-messages = 消息
+posta-servers = 服务器
+posta-conversations = 会话
+posta-call = 通话
+posta-call-failed = 通话失败
+posta-call-connecting = 正在连接…
+
 direct-messages = 私信
 find-conversation = 寻找对话
 find-conversation-tooltip = 搜索已加载的对话（Ctrl/Cmd+K）
