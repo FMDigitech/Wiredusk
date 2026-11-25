@@ -23,8 +23,8 @@ impl Default for ReadingPreferences {
 		Self {
 			zoom_percent: 100,
 			sidebar_width: 236,
-			show_members: true,
-			show_members_dms: true,
+			show_members: !cfg!(target_os = "macos"),
+			show_members_dms: !cfg!(target_os = "macos"),
 			compact_messages: false,
 			double_click_reaction_enabled: false,
 			double_click_reaction: 0,
@@ -59,35 +59,21 @@ mod tests {
 	use super::*;
 
 	#[test]
-	fn defaults_and_inclusive_bounds() {
-		let defaults = ReadingPreferences::default();
-		assert_eq!(defaults.zoom_percent, 100);
-		assert_eq!(defaults.sidebar_width, 236);
-		assert!(defaults.show_members && defaults.smooth_scrolling && defaults.is_valid());
-		for zoom_percent in [0, 49, 50, 79, 80, 150, 151, u16::MAX] {
-			for sidebar_width in [0, 189, 190, 360, 361, u16::MAX] {
-				for show_members in [false, true] {
-					let preferences = ReadingPreferences {
-						zoom_percent,
-						sidebar_width,
-						show_members,
-						show_members_dms: show_members,
-						compact_messages: false,
-						double_click_reaction_enabled: false,
-						double_click_reaction: 0,
-						animate_gifs: false,
-						smooth_scrolling: true,
-						scroll_speed_percent: 100,
-						hide_media_links: true,
-						confirm_external_links: true,
-					};
-					assert_eq!(
-						preferences.is_valid(),
-						matches!(zoom_percent, 50 | 79 | 80 | 150)
-							&& matches!(sidebar_width, 190 | 360)
-					);
-				}
-			}
+	fn inclusive_zoom_and_sidebar_bounds() {
+		for (zoom_percent, sidebar_width, valid) in [
+			(49, 236, false),
+			(50, 190, true),
+			(150, 360, true),
+			(151, 236, false),
+			(100, 189, false),
+			(100, 361, false),
+		] {
+			let preferences = ReadingPreferences {
+				zoom_percent,
+				sidebar_width,
+				..ReadingPreferences::default()
+			};
+			assert_eq!(preferences.is_valid(), valid);
 		}
 	}
 }

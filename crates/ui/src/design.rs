@@ -268,7 +268,11 @@ const fn rgba(value: u32, alpha: u8) -> Color32 {
 	)
 }
 /// Serein azure: the house accent, packed for call sites that speak in integer colours.
-pub const DEFAULT_PRIMARY_RGB: u32 = 0x1a72e8;
+pub const DEFAULT_PRIMARY_RGB: u32 = if crate::posta::ENABLED {
+	0x7c3aed
+} else {
+	0x1a72e8
+};
 pub const DEFAULT_PRIMARY_COLOR: [u8; 3] = [
 	(DEFAULT_PRIMARY_RGB >> 16) as u8,
 	(DEFAULT_PRIMARY_RGB >> 8) as u8,
@@ -342,12 +346,28 @@ pub fn builtin_colors(dark: bool, variant: Variant) -> Palette {
 			rgb(0x27272a),
 		),
 		Variant::Standard => Palette {
-			base: rgb(0xe4e4e7),
-			sidebar: rgb(0xf2f2f4),
-			chat: Color32::WHITE,
+			base: rgb(if cfg!(target_os = "macos") {
+				0xeee8e9
+			} else {
+				0xe4e4e7
+			}),
+			sidebar: rgb(if cfg!(target_os = "macos") {
+				0xf8f4f2
+			} else {
+				0xf2f2f4
+			}),
+			chat: rgb(if cfg!(target_os = "macos") {
+				0xfffcfa
+			} else {
+				0xffffff
+			}),
 			raised: rgb(0xebebee),
 			hover: rgb(0xe8e8eb),
-			selected: rgb(0xdadade),
+			selected: rgb(if cfg!(target_os = "macos") {
+				0xede0fa
+			} else {
+				0xdadade
+			}),
 			border: rgb(0xe0e0e4),
 			text_strong: rgb(0x0f0f11),
 			text: rgb(0x2f2f34),
@@ -361,8 +381,16 @@ pub fn builtin_colors(dark: bool, variant: Variant) -> Palette {
 			mention_bg: MENTION_BG,
 			mention_text: rgb(0x14508f),
 			backdrop: None,
-			canvas: Color32::WHITE,
-			surface: rgb(0xf2f2f4),
+			canvas: rgb(if cfg!(target_os = "macos") {
+				0xfffcfa
+			} else {
+				0xffffff
+			}),
+			surface: rgb(if cfg!(target_os = "macos") {
+				0xf8f4f2
+			} else {
+				0xf2f2f4
+			}),
 		},
 		Variant::Eclipse => dark_common(
 			Color32::BLACK,

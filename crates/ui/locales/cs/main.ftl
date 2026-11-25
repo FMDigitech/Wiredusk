@@ -83,6 +83,13 @@ gpu-power-saving = Úspora energie
 gpu-automatic-description = Nechá Serein vybrat grafický procesor, který dokáže vykreslit toto okno.
 gpu-high-performance-description = Použije samostatnou grafickou kartu, pokud je dostupná.
 gpu-power-saving-description = Použije integrovanou grafiku a šetří baterii.
+posta-messages = Zprávy
+posta-servers = Servery
+posta-conversations = Konverzace
+posta-call = Zavolat
+posta-call-failed = Hovor se nezdařil
+posta-call-connecting = Připojování…
+
 direct-messages = Přímé zprávy
 find-conversation = Najít konverzaci
 find-conversation-tooltip = Hledat v načtených konverzacích (Ctrl/Cmd+K)

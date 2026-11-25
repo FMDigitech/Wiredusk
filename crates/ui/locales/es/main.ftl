@@ -80,6 +80,13 @@ gpu-power-saving = Ahorro de energía
 gpu-automatic-description = Deje que Serein elija la GPU que puede dibujar esta ventana.
 gpu-high-performance-description = Utilice la tarjeta gráfica discreta cuando haya una disponible.
 gpu-power-saving-description = Utilice gráficos integrados para ahorrar batería.
+posta-messages = Mensajes
+posta-servers = Servidores
+posta-conversations = Conversaciones
+posta-call = Llamar
+posta-call-failed = Error en la llamada
+posta-call-connecting = Conectando…
+
 direct-messages = Mensajes directos
 find-conversation = encontrar conversación
 find-conversation-tooltip = Buscar conversaciones cargadas (Ctrl/Cmd+K)

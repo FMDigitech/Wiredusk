@@ -1008,6 +1008,15 @@ impl State {
 					.and_then(|g| g.member.as_ref())
 					.is_some_and(|member| roles.iter().any(|role| member.roles.contains(role))))
 	}
+	/// A bounded one-line excerpt with mention names resolved through the session cache.
+	pub fn conversation_preview(&self, message: &Message) -> Option<String> {
+		let line = message
+			.content
+			.lines()
+			.find(|line| !line.trim().is_empty())?;
+		Some(self.alert_preview(message, line.trim()))
+	}
+
 	fn alert_preview(&self, message: &Message, mut text: &str) -> String {
 		let guild = self
 			.channel(message.channel)

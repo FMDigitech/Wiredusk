@@ -361,6 +361,7 @@ impl MessagingUi {
 		ui: &mut egui::Ui,
 		state: &mut State,
 		commands: &mut Vec<Command>,
+		named: bool,
 	) {
 		if self.folder_ui.generation != state.generation {
 			self.folder_ui = FolderUi {
@@ -499,9 +500,23 @@ impl MessagingUi {
 							}
 							rail_badge(ui, response.id, response.rect, count, colors.base);
 							self.guild_rail_name(&response, state, guild);
+							let response = if named {
+								crate::posta::server_label(
+									ui,
+									response,
+									&guild.name,
+									self.guild == Some(id),
+								)
+							} else {
+								response
+							};
 							self.preload.guild(&response, state, id);
 							if response.clicked() {
 								self.guild = Some(id);
+								if named && state.guild_target(id).is_none() {
+									state.open_home();
+									self.navigation_channel = None;
+								}
 								if let Some(command) = state.select_guild(id) {
 									commands.push(command);
 								}
@@ -606,6 +621,12 @@ impl MessagingUi {
 									),
 								)
 							});
+							let name = folder.name.as_deref().unwrap_or("Server folder");
+							let response = if named {
+								crate::posta::server_label(ui, response, name, open)
+							} else {
+								response
+							};
 							if response.clicked() {
 								self.folder_ui.toggle(id);
 								self.expanded_folders =
@@ -1072,7 +1093,7 @@ mod tests {
 						events,
 						..Default::default()
 					},
-					|ui| view.server_folders(ui, state, &mut commands),
+					|ui| view.server_folders(ui, state, &mut commands, false),
 				);
 				let position = output
 					.shapes
@@ -1471,7 +1492,7 @@ mod tests {
 					)),
 					..Default::default()
 				},
-				|ui| view.server_folders(ui, state, &mut commands),
+				|ui| view.server_folders(ui, state, &mut commands, false),
 			);
 			let shapes = output.shapes.clone();
 			output.drop_without_applying_deltas();

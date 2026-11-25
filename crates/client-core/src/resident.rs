@@ -116,6 +116,21 @@ impl State {
 			.find(|entry| entry.identity == Identity::from(current))
 			.map(|entry| &entry.timeline)
 	}
+	/// Latest known message if its body is already loaded in this account session.
+	pub fn loaded_latest_message(&self, channel: &Channel) -> Option<&Message> {
+		let latest = channel.last_message?;
+		let timeline = if self.selected == Some(channel.id) {
+			if !self.can_read_history(channel.id) {
+				return None;
+			}
+			&self.timeline
+		} else {
+			self.resident_timeline(channel.id)?
+		};
+		timeline
+			.get(latest)
+			.filter(|message| message.channel == channel.id && !message.ephemeral)
+	}
 	/// Active plus dormant reading rows, including deletion placeholders.
 	pub fn resident_history_rows(&self) -> usize {
 		self.timeline.row_count()
@@ -947,6 +962,21 @@ mod tests {
 		assert_eq!(state.timeline.row_count(), 50);
 		assert_eq!(state.freshness, Freshness::Fresh);
 		assert!(!state.can_read_history(Id(1)));
+	}
+
+	#[test]
+	fn conversation_previews_use_loaded_latest_messages_and_drop_invalidated_pages() {
+		let mut state = state();
+		load(&mut state, 1);
+		load(&mut state, 2);
+		let dm = |state: &State| state.channel(Id(1)).unwrap().clone();
+		assert_eq!(
+			state.loaded_latest_message(&dm(&state)).map(|m| m.id),
+			Some(Id(1050))
+		);
+
+		apply(&mut state, Event::Message(message(1, 1052)));
+		assert!(state.loaded_latest_message(&dm(&state)).is_none());
 	}
 
 	#[test]

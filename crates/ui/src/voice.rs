@@ -1234,7 +1234,7 @@ impl MessagingUi {
 		));
 		if connected {
 			bar_ui.set_opacity(reveal);
-			self.call_controls(&mut bar_ui, state, channel, commands);
+			self.call_controls(&mut bar_ui, state, channel, commands, false);
 		} else {
 			bar_ui.horizontal_centered(|ui| {
 				ui.add_space((ui.available_width() - 160.0).max(0.0) * 0.5);
@@ -2497,6 +2497,21 @@ impl MessagingUi {
 					.corner_radius(8)
 					.min_size(egui::vec2(160.0, 40.0)),
 			)
+		} else if crate::posta::ENABLED && ui.available_width() >= 215.0 {
+			let colors = design::palette(ui);
+			let title = if incoming || state.voice.has_dm_call(channel) {
+				label.clone()
+			} else {
+				self.language.text("posta-call")
+			};
+			ui.add_enabled(
+				unavailable.is_none(),
+				egui::Button::new(design::medium(ui, title, 13.0).color(colors.accent_text))
+					.fill(colors.accent)
+					.stroke(egui::Stroke::NONE)
+					.corner_radius(8)
+					.min_size(egui::vec2(72.0, 30.0)),
+			)
 		} else {
 			ui.add_enabled_ui(unavailable.is_none(), |ui| {
 				crate::icons::button(ui, crate::icons::Icon::Phone, 32.0, &label)
@@ -3496,8 +3511,14 @@ impl MessagingUi {
 		state: &mut State,
 		channel: Id,
 		commands: &mut Vec<Command>,
+		compact: bool,
 	) {
 		let colors = design::palette(ui);
+		let (control_width, hang_width, gap, margin) = if compact {
+			(38.0, 48.0, 6.0, 6.0)
+		} else {
+			(48.0, HANG_UP, BAR_GAP, STAGE_MARGIN)
+		};
 		let Some(call) = state.voice.active.as_ref() else {
 			return;
 		};
@@ -3511,46 +3532,42 @@ impl MessagingUi {
 		let muted = self.voice_muted || deafened || !can_speak;
 		let controls = self.controls_enabled(state);
 		let voice_toggles = controls || state.demo;
-		let focused = self.voice_focus.is_some();
-		let screen_focused = matches!(
-			self.voice_focus,
-			Some(StageFocus::LocalScreen | StageFocus::Stream(_))
-		);
+		let focused = !compact && self.voice_focus.is_some();
+		let screen_focused = focused
+			&& matches!(
+				self.voice_focus,
+				Some(StageFocus::LocalScreen | StageFocus::Stream(_))
+			);
 		// Discord's call bar: microphone and camera with their device menus, then share and
 		// more, then the red action; view actions sit at the right edge.
-		let watched = match self.voice_focus {
+		let watched = match self.voice_focus.filter(|_| focused) {
 			Some(StageFocus::Stream(user)) if call.watching == Some(user) => Some(user),
 			_ => None,
 		};
 		let bar = ui.max_rect();
 		// A narrow stage sheds secondary controls (view toggles, device chevrons, then
 		// share/more) before anything overlaps; mute, camera and hang-up always stay.
-		let actions = 2.0 * 48.0;
-		let essential = 2.0 * 48.0 + BAR_GAP + HANG_UP;
+		let actions = 2.0 * control_width;
+		let essential = 2.0 * control_width + gap + hang_width;
 		let side = [watched.is_some(), focused, screen_focused]
 			.iter()
 			.filter(|shown| **shown)
 			.count() as f32
 			* 44.0;
-		let side_shown = bar.width() - 2.0 * STAGE_MARGIN >= essential + BAR_GAP + side;
+		let side_shown = bar.width() - 2.0 * margin >= essential + gap + side;
 		let side = if side_shown { side } else { 0.0 };
-		let room = bar.width() - 2.0 * STAGE_MARGIN - if side > 0.0 { side + BAR_GAP } else { 0.0 };
-		let chevrons = room >= 2.0 * 28.0 + actions + BAR_GAP + essential;
+		let room = bar.width() - 2.0 * margin - if side > 0.0 { side + gap } else { 0.0 };
+		let chevrons = room >= 2.0 * 28.0 + actions + gap + essential;
 		let media = if chevrons {
-			2.0 * (48.0 + 28.0)
+			2.0 * (control_width + 28.0)
 		} else {
-			2.0 * 48.0
+			2.0 * control_width
 		};
-		let actions_shown = room >= media + BAR_GAP + actions + BAR_GAP + HANG_UP;
-		let width = media
-			+ BAR_GAP + if actions_shown {
-			actions + BAR_GAP
-		} else {
-			0.0
-		} + HANG_UP;
+		let actions_shown = room >= media + gap + actions + gap + hang_width;
+		let width = media + gap + if actions_shown { actions + gap } else { 0.0 } + hang_width;
 		let left = (bar.center().x - width * 0.5)
-			.min(bar.right() - STAGE_MARGIN - side - BAR_GAP - width)
-			.max(bar.left() + STAGE_MARGIN);
+			.min(bar.right() - margin - side - gap - width)
+			.max(bar.left() + margin);
 		let mut camera_clicked = false;
 		let mut mute_clicked = false;
 		let mut deafen_clicked = false;
@@ -3564,7 +3581,7 @@ impl MessagingUi {
 				))
 				.layout(egui::Layout::left_to_right(egui::Align::Center)),
 		);
-		row.spacing_mut().item_spacing.x = BAR_GAP;
+		row.spacing_mut().item_spacing.x = gap;
 		pill(&mut row, media, |ui| {
 			let mic = control(
 				ui,
@@ -3573,7 +3590,7 @@ impl MessagingUi {
 				} else {
 					crate::icons::Icon::Microphone
 				},
-				48.0,
+				control_width,
 				voice_toggles && (can_speak || state.demo),
 				if muted { colors.danger } else { STAGE_TEXT },
 				if muted { "Unmute" } else { "Mute" },
@@ -3605,7 +3622,7 @@ impl MessagingUi {
 				} else {
 					crate::icons::Icon::VideoSlash
 				},
-				48.0,
+				control_width,
 				controls && (camera || can_camera),
 				if camera { colors.positive } else { STAGE_TEXT },
 				if camera {
@@ -3647,11 +3664,11 @@ impl MessagingUi {
 		});
 		if actions_shown {
 			pill(&mut row, actions, |ui| {
-				self.screen_share_control(ui, state);
+				self.screen_share_control(ui, state, control_width);
 				let more = control(
 					ui,
 					crate::icons::Icon::More,
-					48.0,
+					control_width,
 					true,
 					STAGE_TEXT,
 					"More options",
@@ -3677,8 +3694,8 @@ impl MessagingUi {
 		}
 		// While a watched share is enlarged, the red action stops watching, as in Discord.
 		let hang_up = {
-			let (rect, response) =
-				row.allocate_exact_size(egui::vec2(HANG_UP, CONTROL_HEIGHT), egui::Sense::click());
+			let (rect, response) = row
+				.allocate_exact_size(egui::vec2(hang_width, CONTROL_HEIGHT), egui::Sense::click());
 			let enabled = watched.is_some() || !state.demo;
 			let fill = if !enabled {
 				colors.danger.gamma_multiply(0.45)
@@ -3726,8 +3743,8 @@ impl MessagingUi {
 		let mut view = ui.new_child(
 			egui::UiBuilder::new()
 				.max_rect(egui::Rect::from_min_max(
-					egui::pos2(bar.right() - STAGE_MARGIN - side, bar.top()),
-					egui::pos2(bar.right() - STAGE_MARGIN, bar.bottom()),
+					egui::pos2(bar.right() - margin - side, bar.top()),
+					egui::pos2(bar.right() - margin, bar.bottom()),
 				))
 				.layout(egui::Layout::right_to_left(egui::Align::Center)),
 		);
@@ -3806,7 +3823,7 @@ impl MessagingUi {
 		}
 	}
 
-	fn screen_share_control(&mut self, ui: &mut egui::Ui, state: &State) {
+	fn screen_share_control(&mut self, ui: &mut egui::Ui, state: &State, width: f32) {
 		let enabled = self.screen.busy
 			|| state.demo
 			|| (self.screen.supported
@@ -3833,7 +3850,7 @@ impl MessagingUi {
 			} else {
 				crate::icons::Icon::ScreenShare
 			},
-			48.0,
+			width,
 			enabled,
 			color,
 			label,
@@ -3878,6 +3895,148 @@ impl MessagingUi {
 			.as_ref()
 			.filter(|call| call.guild.is_none() && Some(call.channel) == state.selected)
 			.map(|call| call.channel)
+			.filter(|channel| {
+				!crate::posta::ENABLED
+					|| state.is_group_dm(*channel)
+					|| self.stage_shows_video(state, *channel)
+			})
+	}
+
+	/// Keeps the call reachable while reading a conversation, without drawing another stage.
+	pub(super) fn posta_call_strip(
+		&mut self,
+		ui: &mut egui::Ui,
+		state: &mut State,
+		commands: &mut Vec<Command>,
+		guild_stage: bool,
+	) {
+		let Some(call) = state.voice.active.as_ref() else {
+			return;
+		};
+		let channel = call.channel;
+		if self.dm_call_stage(state).is_some() || (guild_stage && state.selected == Some(channel)) {
+			return;
+		}
+		let name = state.channel(channel).map_or_else(
+			|| self.language.text("direct-messages"),
+			|room| state.conversation_name(room).to_owned(),
+		);
+		let elapsed = elapsed_label(call);
+		let status = self.language.text(match call.phase {
+			Phase::Failed => "posta-call-failed",
+			Phase::Waiting | Phase::Connected if call.reconnecting.is_none() => {
+				"voice-call-bar-call-in-progress"
+			}
+			_ if call.reconnecting.is_some() => "voice-voice-card-section-reconnecting",
+			_ => "posta-call-connecting",
+		});
+		let error = call.error;
+		let active_here = state.selected == Some(channel);
+		let wide = ui.available_width() >= 568.0;
+		egui::Panel::top("posta-call-strip")
+			.show_separator_line(false)
+			.frame(egui::Frame::new().inner_margin(egui::Margin::symmetric(10, 6)))
+			.show(ui, |ui| {
+				egui::Frame::new()
+					.fill(crate::posta::CALL_SURFACE)
+					.corner_radius(10)
+					.inner_margin(egui::Margin::symmetric(8, 4))
+					.show(ui, |ui| {
+						ui.set_width(ui.available_width());
+						ui.visuals_mut().dark_mode = true;
+						let mut open = false;
+						let layout = if wide {
+							egui::Layout::left_to_right(egui::Align::Center)
+						} else {
+							egui::Layout::top_down(egui::Align::Min)
+						};
+						ui.with_layout(layout, |ui| {
+							let details_width = if wide {
+								(ui.available_width() - 330.0).clamp(190.0, 280.0)
+							} else {
+								ui.available_width()
+							};
+							ui.allocate_ui_with_layout(
+								egui::vec2(details_width, 38.0),
+								egui::Layout::left_to_right(egui::Align::Center),
+								|ui| {
+									let connection = crate::icons::button(
+										ui,
+										crate::icons::Icon::InCall,
+										28.0,
+										&self.language.text("voice-connection-title"),
+									);
+									self.voice_latency.popup(connection);
+									for entry in stage_participants(state, channel)
+										.iter()
+										.take(if wide { 3 } else { 2 })
+									{
+										let participant = shown_participant(state, entry);
+										let (user, name) = resolve_member(state, entry);
+										let response = if let Some(user) = user {
+											let avatar =
+												self.avatars.show(ui, user, 24.0, state.demo);
+											self.profile.person_click(ui, &avatar, None, user);
+											avatar
+										} else {
+											design::avatar(ui, name, 24.0)
+										};
+										if self.is_speaking(state, channel, &participant) {
+											ui.painter().circle_stroke(
+												response.rect.center(),
+												13.0,
+												(2.0, design::palette(ui).positive),
+											);
+										}
+										self.voice_participant_menu(&response, state, entry);
+									}
+									ui.vertical(|ui| {
+										ui.set_max_width(ui.available_width());
+										ui.spacing_mut().item_spacing.y = 1.0;
+										let title =
+											design::semibold(ui, &name, 13.0).color(STAGE_TEXT);
+										let response = ui.add(
+											egui::Label::new(title)
+												.truncate()
+												.sense(egui::Sense::click()),
+										);
+										open =
+											!active_here && response.on_hover_text(&name).clicked();
+										ui.add(
+											egui::Label::new(
+												RichText::new(elapsed.as_ref().map_or_else(
+													|| status.clone(),
+													|time| format!("{status} · {time}"),
+												))
+												.size(11.0)
+												.color(STAGE_MUTED),
+											)
+											.truncate(),
+										);
+									});
+								},
+							);
+							let (rect, _) = ui.allocate_exact_size(
+								egui::vec2(ui.available_width(), CONTROL_HEIGHT),
+								egui::Sense::hover(),
+							);
+							let mut controls = ui.new_child(
+								egui::UiBuilder::new()
+									.max_rect(rect)
+									.layout(egui::Layout::left_to_right(egui::Align::Center)),
+							);
+							self.call_controls(&mut controls, state, channel, commands, true);
+						});
+						call_failure(ui, error, STAGE_TEXT);
+						if open && let Some(command) = state.select(channel) {
+							commands.push(command);
+						}
+					});
+			});
+		if elapsed.is_some() {
+			ui.ctx()
+				.request_repaint_after(std::time::Duration::from_secs(1));
+		}
 	}
 
 	/// DM call stage above the conversation, plus the incoming-call banner. `header` carries
@@ -3891,13 +4050,7 @@ impl MessagingUi {
 	) {
 		let colors = design::palette(ui);
 		let selected = state.selected;
-		if let Some(channel) = state
-			.voice
-			.active
-			.as_ref()
-			.filter(|call| call.guild.is_none() && Some(call.channel) == selected)
-			.map(|call| call.channel)
-		{
+		if let Some(channel) = self.dm_call_stage(state) {
 			let stage = self.stage_shows_video(state, channel) || state.is_group_dm(channel);
 			// The stage also carries the conversation header when it draws one.
 			let height = if stage {
@@ -4018,7 +4171,7 @@ impl MessagingUi {
 							.layout(egui::Layout::left_to_right(egui::Align::Center)),
 					);
 					bar_ui.set_opacity(reveal);
-					self.call_controls(&mut bar_ui, state, channel, commands);
+					self.call_controls(&mut bar_ui, state, channel, commands, false);
 				});
 			self.apply_watch_request(state);
 		}

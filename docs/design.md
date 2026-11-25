@@ -6,20 +6,34 @@ accent, softer corner radii and its own server-rail selection language. The pale
 and spacing live in `crates/ui/src/design.rs`; every view resolves colours through
 `design::palette(ui)`.
 
+On macOS, the Posta layout opens Messages, Servers and Friends from a labeled
+toolbar. The Messages sidebar stays visible during calls and shows the latest
+message when its body is already loaded. Server navigation displays server and
+folder names next to their icons, with channels in a separate column.
+
+A direct message uses the reading preference for its docked profile. New macOS
+preferences start with the profile and server member panes closed. The header
+avatar opens the profile popout. The profile button opens the full profile at narrow widths. The
+account and settings remain in the navigation footer.
+
+An audio-only one-to-one call uses a compact strip above the transcript. The
+strip keeps the call reachable while browsing other conversations. The dedicated
+voice room and stages for group calls, video and screen sharing still provide
+their participant and media views.
+
 ## Theme tokens and presets
 
 The `Palette` carries surface roles: `base` (title strip and server rail), `sidebar`
 (channel and member lists), `chat`, `raised` (composer, cards, search field, popovers), `hover`,
-`selected`, `border`, `text_strong`/`text`/`muted`, `link`, `accent` (Serein azure `#1a72e8`),
-presence
-colours, mention colours and an optional two-stop `backdrop` gradient. `canvas` and `surface`
+`selected`, `border`, `text_strong`/`text`/`muted`, `link`, `accent` (Posta purple `#7c3aed`
+on macOS and Serein azure `#1a72e8` elsewhere), presence colours, mention colours and an optional two-stop `backdrop` gradient. `canvas` and `surface`
 remain as aliases of `chat` and `sidebar` for older call sites.
 
 A process-wide `Variant` recolours the whole application on top of egui's light/dark preference:
 
 | Preset | Surfaces |
 |---|---|
-| Serein | House neutral greys: dark (`#0e0e10` / `#141416` / `#18181b` / `#202023`) or light (`#e4e4e7` / `#f2f2f4` / white), following System/Light/Dark |
+| Serein | Neutral greys and a warm light palette on macOS, following System/Light/Dark |
 | Eclipse | Deep black surfaces for OLED displays |
 | Slate | Lighter blue-grey surfaces (`#1b1f2a` / `#262b38` / `#2c3140`) |
 | Nightfall, Ember, Verdant, Afterglow | Gradient backdrop painted under translucent dark surfaces |

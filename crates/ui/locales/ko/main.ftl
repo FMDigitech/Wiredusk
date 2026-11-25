@@ -83,6 +83,13 @@ gpu-power-saving = 절전
 gpu-automatic-description = Serein이 이 창을 표시할 GPU를 선택합니다.
 gpu-high-performance-description = 사용 가능한 경우 외장 그래픽 카드를 사용합니다.
 gpu-power-saving-description = 내장 그래픽을 사용해 배터리를 절약합니다.
+posta-messages = 메시지
+posta-servers = 서버
+posta-conversations = 대화
+posta-call = 통화
+posta-call-failed = 통화 실패
+posta-call-connecting = 연결 중…
+
 direct-messages = 다이렉트 메시지
 find-conversation = 대화 찾기
 find-conversation-tooltip = 불러온 대화 검색(Ctrl/Cmd+K)

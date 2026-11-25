@@ -2145,3 +2145,19 @@ no hardware decoder is installed. Real calls and streams were not run: the strea
 come from the synthetic source only, and stream and camera pictures are still copied on
 every platform. Package size was not measured. `video::gst::tests::native_mov_decodes_audio_video_and_seeks` fails
 on the Asahi machine ("no frame after seek") with and without this change.
+
+## Posta macOS package size
+
+Built both revisions with Rust 1.99.1 and `cargo xtask package` on x86_64 macOS
+26.7.3 with an AMD Ryzen 9 5900X and 48 GiB RAM. Each build used the locked
+dependencies and the default release profile in a separate Cargo target directory.
+The native packages include voice and are ad-hoc signed.
+
+| Bytes | Base `fd92226e` | Posta `71b45ba0` | Delta |
+| --- | ---: | ---: | ---: |
+| Signed executable | 93,673,680 | 93,661,232 | −12,448 |
+| Installed app, sum of file sizes | 99,767,778 | 99,755,330 | −12,448 |
+| App ZIP, `ditto -c -k --keepParent` | 63,988,665 | 63,972,650 | −16,015 |
+
+The offline debug call fixture did not consistently render on the baseline
+before sampling, so this comparison reports package sizes only.

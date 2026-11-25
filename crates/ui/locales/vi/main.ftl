@@ -83,6 +83,13 @@ gpu-power-saving = Tiết kiệm điện
 gpu-automatic-description = Hãy để Serein chọn GPU có thể vẽ được cửa sổ này.
 gpu-high-performance-description = Sử dụng card đồ họa rời khi có sẵn.
 gpu-power-saving-description = Sử dụng đồ họa tích hợp để tiết kiệm pin.
+posta-messages = Tin nhắn
+posta-servers = Máy chủ
+posta-conversations = Cuộc trò chuyện
+posta-call = Gọi
+posta-call-failed = Cuộc gọi thất bại
+posta-call-connecting = Đang kết nối…
+
 direct-messages = Tin nhắn trực tiếp
 find-conversation = Tìm cuộc trò chuyện
 find-conversation-tooltip = Tìm kiếm các cuộc hội thoại đã tải (Ctrl/Cmd+K)
